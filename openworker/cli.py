@@ -7,11 +7,36 @@ from mcp import StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.client.session import ClientSession
 from openworker.client import ChatSession
+from openworker.tools.executor import ToolExecutor
 from contextlib import AsyncExitStack
 import os
 
 app = typer.Typer()
 console = Console()
+
+# Global spinner state holder
+SPINNER_STATE = []
+
+async def async_confirm(question: str) -> bool:
+    """Async wrapper for typer.confirm with spinner pause."""
+    # Pause spinner if active
+    active_status = SPINNER_STATE[0] if SPINNER_STATE else None
+    if active_status:
+        active_status.stop()
+        
+    try:
+        # Force a new line before prompt
+        # Render the rich text question
+        console.print(question)
+        # Ask for confirmation without repeating the text
+        return await asyncio.get_event_loop().run_in_executor(
+            None, 
+            lambda: typer.confirm("", default=False)
+        )
+    finally:
+        # Resume spinner
+        if active_status:
+            active_status.start()
 
 async def interactive_loop():
     console.print("[bold green]Starting Openworker...[/bold green]")
@@ -71,13 +96,16 @@ async def interactive_loop():
         if folders:
             console.print(f"[bold blue]Active Folders:[/bold blue] {folders}")
 
-        chat = ChatSession(clients, allowed_folders=folders)
+        # Initialize ToolExecutor
+        tool_executor = ToolExecutor(clients, confirmation_callback=async_confirm)
+        
+        chat = ChatSession(tool_executor, allowed_folders=folders)
         await chat.initialize()
         
         from openworker.command_handler import CommandHandler
         cmd_handler = CommandHandler(console, clients, db)
 
-        console.print(f"[bold blue]Available Tools:[/bold blue] {[t['function']['name'] for t in chat.available_tools]}")
+        console.print(f"[bold blue]Available Tools:[/bold blue] {[t['function']['name'] for t in tool_executor.get_tools_definitions()]}")
         console.print("Type 'exit' or use '\\' for commands (e.g. \\help).")
 
         while True:
@@ -93,8 +121,13 @@ async def interactive_loop():
                 continue
 
             # Show a spinner while thinking
-            with console.status("[bold green]Thinking...[/bold green]"):
-                response = await chat.chat(user_input)
+            with console.status("[bold green]Thinking...[/bold green]") as status:
+                SPINNER_STATE.append(status)
+                try:
+                    response = await chat.chat(user_input)
+                finally:
+                    if SPINNER_STATE:
+                        SPINNER_STATE.pop()
             
             console.print(Markdown(response))
 
