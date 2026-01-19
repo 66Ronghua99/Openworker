@@ -1,0 +1,18 @@
+{
+    "desc": "Configuration for MacOpenworker MCP Servers",
+    "servers": {
+        "macopenworker": {
+            "command": "uv",
+            "args": [
+                "run",
+                "python",
+                "-m",
+                "openworker.server"
+            ],
+            "env": {
+                "ANONYMIZED_TELEMETRY": "False"
+            },
+            "description": "Internal server for File Ops and RAG"
+        }
+    }
+}
