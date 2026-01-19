@@ -1,2 +1,2 @@
-# MacOpenworker
-MacCoworker
+# Openworker
+A local AI assistant.
