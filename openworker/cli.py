@@ -14,7 +14,7 @@ app = typer.Typer()
 console = Console()
 
 async def interactive_loop():
-    console.print("[bold green]Starting MacOpenworker...[/bold green]")
+    console.print("[bold green]Starting Openworker...[/bold green]")
     
     # Load Config
     config_path = "mcp_config.json"
@@ -25,7 +25,7 @@ async def interactive_loop():
         # Default config if missing
         config = {
             "servers": {
-                "macopenworker": {
+                "openworker": {
                     "command": "uv",
                     "args": ["run", "python", "-m", "openworker.server"],
                     "env": os.environ.copy()
@@ -63,11 +63,22 @@ async def interactive_loop():
             console.print("[bold red]No servers connected. Exiting.[/bold red]")
             return
 
-        chat = ChatSession(clients)
+        from openworker.state import get_db
+        db = get_db()
+        
+        # Initial Folder Load
+        folders = db.list_folders()
+        if folders:
+            console.print(f"[bold blue]Active Folders:[/bold blue] {folders}")
+
+        chat = ChatSession(clients, allowed_folders=folders)
         await chat.initialize()
         
+        from openworker.command_handler import CommandHandler
+        cmd_handler = CommandHandler(console, clients, db)
+
         console.print(f"[bold blue]Available Tools:[/bold blue] {[t['function']['name'] for t in chat.available_tools]}")
-        console.print("Type 'exit' or 'quit' to close.")
+        console.print("Type 'exit' or use '\\' for commands (e.g. \\help).")
 
         while True:
             user_input = await asyncio.get_event_loop().run_in_executor(None, input, "\n> ")
@@ -75,6 +86,10 @@ async def interactive_loop():
                 break
             
             if not user_input.strip():
+                continue
+
+            # Command Dispatcher
+            if cmd_handler.handle_command(user_input, chat):
                 continue
 
             # Show a spinner while thinking

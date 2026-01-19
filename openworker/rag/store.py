@@ -8,7 +8,7 @@ from openworker.rag.splitters import RecursiveTextSplitter
 import numpy as np
 
 class RagStore:
-    def __init__(self, persist_path: str = "./.rag_store"):
+    def __init__(self, persist_path: str = "./.store"):
         self.client = chromadb.PersistentClient(path=persist_path)
         self.collection = self.client.get_or_create_collection(name="documents")
         
@@ -36,6 +36,9 @@ class RagStore:
             self.bm25 = BM25Okapi(tokenized_corpus)
 
     def index_directory(self, directory: str):
+        import hashlib
+        from datetime import datetime
+        
         path = Path(directory)
         if not path.exists():
             return "Directory not found."
@@ -45,24 +48,47 @@ class RagStore:
         
         for p in path.rglob("*"):
             if p.is_file() and not p.name.startswith("."):
-                content = read_file_content(str(p))
-                if not content or content.startswith("Error"):
-                    continue
-                
-                chunks = self.splitter.split_text(content)
-                
-                for i, chunk in enumerate(chunks):
-                    doc_id = f"{p.name}_{i}"
-                    ids_batch.append(doc_id)
-                    docs_batch.append(chunk)
-                    metas_batch.append({"source": str(p), "chunk": i})
-                
-                count += 1
+                try:
+                    content = read_file_content(str(p))
+                    if not content or content.startswith("Error"):
+                        continue
+                        
+                    # Compute Hash
+                    file_hash = hashlib.md5(content.encode('utf-8')).hexdigest()
+                    last_modified = datetime.fromtimestamp(p.stat().st_mtime).isoformat()
+                    
+                    # Compute relative path for cleaner metadata
+                    rel_path = str(p.relative_to(path.parent))
+                    
+                    # Splitting
+                    chunks = self.splitter.split_text(content)
+                    
+                    for i, chunk in enumerate(chunks):
+                        # Unique ID: Hash + Index (ensures if file content changes, ID changes)
+                        # Actually, keeping ID deterministic based on path + index is better for updates,
+                        # BUT we want to detect content changes. 
+                        # Let's use path+index as ID, and simple overwrite.
+                        doc_id = f"{rel_path}_{i}"
+                        
+                        ids_batch.append(doc_id)
+                        docs_batch.append(chunk)
+                        metas_batch.append({
+                            "source": str(p),
+                            "chunk": i,
+                            "root_path": str(path),
+                            "file_hash": file_hash,
+                            "updated_at": last_modified
+                        })
+                    
+                    count += 1
+                except Exception as e:
+                    print(f"Skipping {p}: {e}")
 
         if ids_batch:
             # Update Vector DB
             embeddings = self.embedder.encode(docs_batch, show_progress_bar=False).tolist()
-            self.collection.add(ids=ids_batch, documents=docs_batch, embeddings=embeddings, metadatas=metas_batch)
+            # Upsert (overwrite if ID exists)
+            self.collection.upsert(ids=ids_batch, documents=docs_batch, embeddings=embeddings, metadatas=metas_batch)
             
             # Update BM25
             self._load_bm25()
@@ -70,9 +96,26 @@ class RagStore:
         return f"Indexed {count} files. Total chunks: {len(self.bm25_ids)}"
 
     def query(self, query_text: str, n_results: int = 10):
+        # Security: Get allowed paths
+        from openworker.security import get_guard
+        allowed_paths = get_guard()._get_allowed_folders()
+        if not allowed_paths:
+             return {"documents": [], "metadatas": []}
+             
+        # Create filter for authorized roots
+        # ChromaDB requires at least 2 items for $or
+        if len(allowed_paths) == 1:
+            where_filter = {"root_path": allowed_paths[0]}
+        else:
+            where_filter = {"$or": [{"root_path": p} for p in allowed_paths]}
+
         # 1. Vector Search
         query_embedding = self.embedder.encode([query_text], show_progress_bar=False).tolist()
-        vector_res = self.collection.query(query_embeddings=query_embedding, n_results=n_results)
+        vector_res = self.collection.query(
+            query_embeddings=query_embedding, 
+            n_results=n_results,
+            where=where_filter
+        )
         
         vec_ids = vector_res['ids'][0] if vector_res['ids'] else []
         vec_docs = vector_res['documents'][0] if vector_res['documents'] else []

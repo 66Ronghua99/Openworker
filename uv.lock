@@ -868,41 +868,6 @@ wheels = [
 ]
 
 [[package]]
-name = "macopenworker"
-version = "0.1.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "chromadb" },
-    { name = "mcp" },
-    { name = "openai" },
-    { name = "openpyxl" },
-    { name = "pypdf" },
-    { name = "python-docx" },
-    { name = "python-dotenv" },
-    { name = "rank-bm25" },
-    { name = "rich" },
-    { name = "scikit-learn" },
-    { name = "sentence-transformers" },
-    { name = "typer" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "chromadb" },
-    { name = "mcp" },
-    { name = "openai" },
-    { name = "openpyxl" },
-    { name = "pypdf" },
-    { name = "python-docx" },
-    { name = "python-dotenv" },
-    { name = "rank-bm25", specifier = ">=0.2.2" },
-    { name = "rich" },
-    { name = "scikit-learn", specifier = ">=1.8.0" },
-    { name = "sentence-transformers" },
-    { name = "typer" },
-]
-
-[[package]]
 name = "markdown-it-py"
 version = "4.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1451,6 +1416,41 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/91/df/553f93ed38bf22f4b999d9be9c185adb558982214f33eae539d3b5cd0858/opentelemetry_semantic_conventions-0.60b1.tar.gz", hash = "sha256:87c228b5a0669b748c76d76df6c364c369c28f1c465e50f661e39737e84bc953", size = 137935, upload-time = "2025-12-11T13:32:50.487Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7a/5e/5958555e09635d09b75de3c4f8b9cae7335ca545d77392ffe7331534c402/opentelemetry_semantic_conventions-0.60b1-py3-none-any.whl", hash = "sha256:9fa8c8b0c110da289809292b0591220d3a7b53c1526a23021e977d68597893fb", size = 219982, upload-time = "2025-12-11T13:32:36.955Z" },
+]
+
+[[package]]
+name = "openworker"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "chromadb" },
+    { name = "mcp" },
+    { name = "openai" },
+    { name = "openpyxl" },
+    { name = "pypdf" },
+    { name = "python-docx" },
+    { name = "python-dotenv" },
+    { name = "rank-bm25" },
+    { name = "rich" },
+    { name = "scikit-learn" },
+    { name = "sentence-transformers" },
+    { name = "typer" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "chromadb" },
+    { name = "mcp" },
+    { name = "openai" },
+    { name = "openpyxl" },
+    { name = "pypdf" },
+    { name = "python-docx" },
+    { name = "python-dotenv" },
+    { name = "rank-bm25", specifier = ">=0.2.2" },
+    { name = "rich" },
+    { name = "scikit-learn", specifier = ">=1.8.0" },
+    { name = "sentence-transformers" },
+    { name = "typer" },
 ]
 
 [[package]]

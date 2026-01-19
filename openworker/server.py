@@ -1,5 +1,6 @@
 from mcp.server.fastmcp import FastMCP
 from openworker.utils.readers import read_file_content
+from openworker.utils.decorators import secure_path
 import os
 from pathlib import Path
 
@@ -14,6 +15,7 @@ os.environ["ANONYMIZED_TELEMETRY"] = "False"
 mcp = FastMCP("macopenworker")
 
 @mcp.tool()
+@secure_path(arg_name="path")
 def read_file(path: str) -> str:
     """
     Read the content of a local file. Supports PDF, Docx, Excel, Text, Code.
@@ -23,6 +25,7 @@ def read_file(path: str) -> str:
     return read_file_content(path)
 
 @mcp.tool()
+@secure_path(arg_name="directory")
 def list_files(directory: str) -> str:
     """
     List files in a directory recursively.
@@ -40,6 +43,7 @@ def list_files(directory: str) -> str:
     return "\n".join(files[:1000]) # hard limit to avoid context blowup
 
 @mcp.tool()
+@secure_path(arg_name="path")
 def write_file(path: str, content: str) -> str:
     """
     Write content to a file. Overwrites if exists.
@@ -57,6 +61,7 @@ def write_file(path: str, content: str) -> str:
         return f"Error writing file: {str(e)}"
 
 @mcp.tool()
+@secure_path(arg_name="directory")
 def index_folder(directory: str) -> str:
     """
     Index a folder for RAG knowledge base.

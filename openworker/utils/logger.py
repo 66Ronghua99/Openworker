@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 
 class AgentLogger:
-    def __init__(self, log_dir: str = "logs"):
+    def __init__(self, log_dir: str = ".logs"):
         os.makedirs(log_dir, exist_ok=True)
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         self.log_file = os.path.join(log_dir, f"agent_trace_{timestamp}.log")
@@ -27,7 +27,7 @@ class AgentLogger:
 
     def log_tool_result(self, tool_name: str, result: str):
         # Truncate long results
-        preview = result[:500] + "..." if len(result) > 500 else result
+        preview = result[:2000] + "..." if len(result) > 2000 else result
         self.logger.info(f"TOOL RESULT ({tool_name}): {preview}")
 
     def log_response(self, response: str):

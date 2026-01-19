@@ -1,7 +1,7 @@
 {
-    "desc": "Configuration for MacOpenworker MCP Servers",
+    "desc": "Configuration for Openworker MCP Servers",
     "servers": {
-        "macopenworker": {
+        "openworker": {
             "command": "uv",
             "args": [
                 "run",
