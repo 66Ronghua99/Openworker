@@ -5,10 +5,14 @@ from rank_bm25 import BM25Okapi
 from pathlib import Path
 from openworker.utils.readers import read_file_content
 from openworker.rag.splitters import RecursiveTextSplitter
+from openworker.rag.security import get_guard
+from openworker.config import CHROMA_PATH
 import numpy as np
 
 class RagStore:
-    def __init__(self, persist_path: str = "./.store"):
+    def __init__(self, persist_path: str = None):
+        if persist_path is None:
+            persist_path = str(CHROMA_PATH)
         self.client = chromadb.PersistentClient(path=persist_path)
         self.collection = self.client.get_or_create_collection(name="documents")
         
@@ -97,7 +101,6 @@ class RagStore:
 
     def query(self, query_text: str, n_results: int = 10):
         # Security: Get allowed paths
-        from openworker.security import get_guard
         allowed_paths = get_guard()._get_allowed_folders()
         if not allowed_paths:
              return {"documents": [], "metadatas": []}

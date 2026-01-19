@@ -2,9 +2,12 @@ import sqlite3
 import os
 from datetime import datetime
 from typing import List
+from openworker.config import DB_PATH
 
 class StateDB:
-    def __init__(self, db_path: str = "./.store/openworker.db"):
+    def __init__(self, db_path: str = None):
+        if db_path is None:
+            db_path = str(DB_PATH)
         self.db_path = db_path
         self._init_db()
 

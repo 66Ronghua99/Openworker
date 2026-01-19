@@ -1,6 +1,6 @@
 [project]
 name = "openworker"
-version = "0.1.0"
+version = "0.0.2"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -17,4 +17,15 @@ dependencies = [
     "openai",
     "rank-bm25>=0.2.2",
     "scikit-learn>=1.8.0",
+    "prompt_toolkit>=3.0.0",
 ]
+
+[project.scripts]
+openworker = "openworker.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+package = true

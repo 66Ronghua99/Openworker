@@ -10,6 +10,11 @@ from openworker.client import ChatSession
 from openworker.tools.executor import ToolExecutor
 from contextlib import AsyncExitStack
 import os
+from prompt_toolkit import PromptSession
+from prompt_toolkit.history import InMemoryHistory
+from prompt_toolkit.formatted_text import HTML
+from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.keys import Keys
 
 app = typer.Typer()
 console = Console()
@@ -41,22 +46,42 @@ async def async_confirm(question: str) -> bool:
 async def interactive_loop():
     console.print("[bold green]Starting Openworker...[/bold green]")
     
-    # Load Config
-    config_path = "mcp_config.json"
-    if os.path.exists(config_path):
-        with open(config_path, "r") as f:
-            config = json.load(f)
+    # Load .env from global path first
+    from openworker.config import CONFIG_PATH, ENV_PATH, get_default_config
+    from dotenv import load_dotenv
+    
+    if ENV_PATH.exists():
+        load_dotenv(ENV_PATH)
+    
+    # Check for API key
+    if not os.environ.get("OPENROUTER_API_KEY") and not os.environ.get("OPENAI_API_KEY"):
+        console.print("[yellow]No API key found. Let's set one up.[/yellow]")
+        console.print("Get your API key from: https://openrouter.ai/keys")
+        api_key = typer.prompt("Enter your OpenRouter API key")
+        
+        if api_key.strip():
+            # Save to .env
+            with open(ENV_PATH, "a") as f:
+                f.write(f"\nOPENROUTER_API_KEY={api_key.strip()}\n")
+            os.environ["OPENROUTER_API_KEY"] = api_key.strip()
+            console.print(f"[green]API key saved to {ENV_PATH}[/green]")
+        else:
+            console.print("[red]No API key provided. Exiting.[/red]")
+            return
+    
+    # Load Config from global path
+    import json as json_lib  # Avoid shadowing
+    
+    if CONFIG_PATH.exists():
+        with open(CONFIG_PATH, "r") as f:
+            config = json_lib.load(f)
     else:
-        # Default config if missing
-        config = {
-            "servers": {
-                "openworker": {
-                    "command": "uv",
-                    "args": ["run", "python", "-m", "openworker.server"],
-                    "env": os.environ.copy()
-                }
-            }
-        }
+        # Create default config
+        config = get_default_config()
+        CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with open(CONFIG_PATH, "w") as f:
+            json_lib.dump(config, f, indent=2)
+        console.print(f"[yellow]Created default config at {CONFIG_PATH}[/yellow]")
 
     async with AsyncExitStack() as stack:
         clients = {}
@@ -105,11 +130,39 @@ async def interactive_loop():
         from openworker.command_handler import CommandHandler
         cmd_handler = CommandHandler(console, clients, db)
 
+        # Initialize Prompt Session with multiline support
+        # Enter: submit, Meta+Enter (Esc+Enter or Option+Enter on Mac): newline
+        history = InMemoryHistory()
+        
+        # Custom key bindings for multiline input
+        kb = KeyBindings()
+        
+        @kb.add(Keys.Enter)
+        def _(event):
+            """Submit on Enter."""
+            event.current_buffer.validate_and_handle()
+        
+        @kb.add(Keys.Escape, Keys.Enter)
+        def _(event):
+            """Insert newline on Esc+Enter."""
+            event.current_buffer.insert_text('\n')
+        
+        session = PromptSession(
+            history=history,
+            multiline=True,
+            key_bindings=kb,
+            prompt_continuation=lambda width, line_number, is_soft_wrap: '  '
+        )
+
         console.print(f"[bold blue]Available Tools:[/bold blue] {[t['function']['name'] for t in tool_executor.get_tools_definitions()]}")
-        console.print("Type 'exit' or use '\\' for commands (e.g. \\help).")
+        console.print("Type 'exit' or use '\\' for commands (e.g. \\help). Use [bold]Esc+Enter[/bold] for newline.")
 
         while True:
-            user_input = await asyncio.get_event_loop().run_in_executor(None, input, "\n> ")
+            try:
+                user_input = await session.prompt_async(HTML("<b>> </b>"))
+            except (EOFError, KeyboardInterrupt):
+                break
+                
             if user_input.lower() in ["exit", "quit", "/quit"]:
                 break
             
