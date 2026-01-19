@@ -1,5 +1,7 @@
 import os
-from typing import List
+from typing import List, Callable
+from functools import wraps
+from inspect import signature
 from openworker.state import StateDB, get_db
 
 class PathGuard:
@@ -39,3 +41,30 @@ def get_guard():
     if _guard is None:
         _guard = PathGuard()
     return _guard
+
+
+def secure_path(arg_name: str = "path"):
+    """
+    Decorator to validate a path argument against authorized folders.
+    If validation fails, returns an error string (friendly for LLM tools).
+    """
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # Inspect arguments to find the target parameter
+            sig = signature(func)
+            bound_args = sig.bind(*args, **kwargs)
+            bound_args.apply_defaults()
+            
+            path_val = bound_args.arguments.get(arg_name)
+            
+            if path_val:
+                # If path_val is a list (e.g. for some future tool), check all? 
+                # For now assuming string.
+                if isinstance(path_val, str):
+                    if not get_guard().validate_path(path_val):
+                        return f"Error: Access denied. Path '{path_val}' is not in an authorized folder."
+            
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator

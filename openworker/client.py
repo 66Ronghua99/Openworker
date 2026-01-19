@@ -11,7 +11,7 @@ from mcp.client.session import ClientSession
 load_dotenv()
 
 from openworker.prompts.system import SYSTEM_PROMPT
-from openworker.utils.decorators import trace_step
+from openworker.utils.logger import trace_step, get_logger
 
 from openworker.tools.executor import ToolExecutor
 
@@ -68,7 +68,6 @@ class ChatSession(ReactAgent):
         # But for AOP purity, let's rely on the decorator for the steps.
         # However, the user input itself isn't a "step" function call unless we wrap it.
         # Let's keep one explicit log for User Input as it's the trigger.
-        from openworker.utils.logger import get_logger
         get_logger().log_input(user_input)
         
         self.history.append({"role": "user", "content": user_input})

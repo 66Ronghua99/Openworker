@@ -1,6 +1,6 @@
 from mcp.server.fastmcp import FastMCP
 from openworker.utils.readers import read_file_content
-from openworker.utils.decorators import secure_path
+from openworker.rag.security import secure_path
 import os
 from pathlib import Path
 
@@ -10,6 +10,9 @@ import sys
 # Configure logging to stderr to avoid breaking MCP stdout protocol
 logging.basicConfig(level=logging.INFO, stream=sys.stderr)
 os.environ["ANONYMIZED_TELEMETRY"] = "False"
+
+# Suppress verbose MCP internal logs
+logging.getLogger("mcp").setLevel(logging.WARNING)
 
 # Initialize FastMCP Server
 mcp = FastMCP("macopenworker")
@@ -90,7 +93,7 @@ def search_knowledge(query: str) -> str:
         # 1. Refine Query
         rewriter = get_rewriter()
         refined_query = rewriter.refine_query(query)
-        logging.info(f"Refined query: '{query}' -> '{refined_query}'")
+        # logging.info(f"Refined query: '{query}' -> '{refined_query}'")
         
         # 2. Search (Hybrid + Rerank)
         store = get_store()

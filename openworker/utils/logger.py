@@ -1,6 +1,9 @@
 import logging
 import os
+import inspect
 from datetime import datetime
+from typing import Callable
+from functools import wraps
 
 class AgentLogger:
     def __init__(self, log_dir: str = ".logs"):
@@ -40,3 +43,49 @@ def get_logger():
     if _logger is None:
         _logger = AgentLogger()
     return _logger
+
+def trace_step(step_name: str = None):
+    """
+    Decorator to log the entry and exit of a function step.
+    Logs inputs and output result.
+    """
+    def decorator(func: Callable) -> Callable:
+        @wraps(func)
+        async def async_wrapper(*args, **kwargs):
+            logger = get_logger()
+            name = step_name or func.__name__
+            
+            # Simple repr of args for logging
+            # (Be careful with huge objects, maybe truncate str representation)
+            args_repr = [str(a)[:100] for a in args]
+            kwargs_repr = {k: str(v)[:100] for k, v in kwargs.items()}
+            
+            # logger.logger.info(f"STEP_START: {name} | Args: {args_repr} {kwargs_repr}")
+            
+            try:
+                result = await func(*args, **kwargs)
+                logger.logger.info(f"STEP_END: {name} | Result: {str(result)[:500]}...")
+                return result
+            except Exception as e:
+                logger.logger.error(f"STEP_ERROR: {name} | {str(e)}")
+                raise e
+        
+        @wraps(func)
+        def sync_wrapper(*args, **kwargs):
+            logger = get_logger()
+            name = step_name or func.__name__
+            
+            try:
+                result = func(*args, **kwargs)
+                return result
+            except Exception as e:
+                logger.logger.error(f"STEP_ERROR: {name} | {str(e)}")
+                raise e
+
+        # Basic async detection
+        if inspect.iscoroutinefunction(func):
+            return async_wrapper
+        else:
+            return sync_wrapper
+
+    return decorator
