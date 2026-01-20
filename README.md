@@ -1,6 +1,6 @@
 # Openworker
 
-A local AI assistant powered by MCP (Model Context Protocol) with RAG capabilities.
+A local AI assistant with Long-term Memory.
 
 ## Features
 
@@ -21,7 +21,7 @@ A local AI assistant powered by MCP (Model Context Protocol) with RAG capabiliti
 
 ```bash
 # Clone the repository
-git clone https://github.com/66Ronghua99/MacOpenworker.git
+git clone https://github.com/66Ronghua99/Openworker.git
 cd MacOpenworker
 
 # Install globally
@@ -34,7 +34,7 @@ openworker
 ### Development Mode
 
 ```bash
-cd MacOpenworker
+cd Openworker
 uv sync
 uv run python -m openworker.cli
 ```
